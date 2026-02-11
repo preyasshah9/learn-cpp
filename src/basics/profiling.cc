@@ -16,6 +16,7 @@ void profileTotalN(int n) {
     std::chrono::duration<double, std::micro> duration = end - start;
     std::cout << "Total of 1000 element took " << duration.count() << " microseconds." << std::endl;
 }
+
 int main() {
     profileTotalN(10000);
     profileTotalN(1000);
