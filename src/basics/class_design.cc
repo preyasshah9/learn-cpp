@@ -1,5 +1,17 @@
 /*
 This code shows basic methods to consider when designing your own class in C++.
+Typically, a class owns resource (Defined by pointer member variables). The RAII design
+paradigm suggests using `unique_ptr` or `shared_ptr` to automatically manage the memory and 
+prevent issues such as memory leaks.
+In this example though, we are assuming a resource management is responsibilities of developer designing the 
+class itself.
+We will touch these methods:
+- Constructor (Initializing an object)
+- Destructor (Destroying object, without RAII, need to delete pointer by itself)
+- Copy Constructor (Support Deep Copy)
+- Copy Assignment (Support Deep Copy)
+- Move Constructor
+- Move Assignment
 */
 
 #include <iostream>
@@ -24,6 +36,7 @@ class A {
         // Define virtual destructor for polymorphic base class.
         //virtual ~A() = default;
 
+        // Method 3: Copy Constructor
         // Default copy constructor will do a shallow copy, result
         // in a double delete when an object is out of scope (destructor called)
         A(const A& other):
@@ -31,22 +44,31 @@ class A {
                 std::cout << "Copy Constructor Called" << std::endl;
             }
 
-        // Copy Assignment needed for same reason, using RAII / smart pointers will
-        // eliminate the need to write these.
+        // Method 4: Copy Assignment
         A& operator=(const A& other) {
             std::cout << "Copy Assignment Called" << std::endl;
             if (this == &other)
                 return *this;  // self-assignment guard
-            delete _baz;  // free existing memory
-
-            _foo = other._foo;
-            _bar = other._bar;
-            _baz = new int(*other._baz);
+            // copy and swap idiom for exception safety.
+            A temp(other);        // copy first (may throw)
+            std::swap(_foo, temp._foo);
+            std::swap(_bar, temp._bar);
+            std::swap(_baz, temp._baz);
 
             return *this;
         }
 
-        // Move Constructor
+        // Method 5: Move Constructor
+        A(A&& other) noexcept: 
+            _foo(other._foo),
+            _bar(other._bar),
+            _baz(other._baz)
+        {
+            std::cout << "Move Constructor Called" << std::endl;
+            other._baz = nullptr;  // prevent double delete
+        }
+
+        // Method 6: Move Assignment
         A& operator=(A&& other) noexcept {
             std::cout << "Move Assignment Called" << std::endl;
             if (this == &other)
@@ -56,21 +78,8 @@ class A {
         
             _foo = other._foo;
             _bar = other._bar;
-            _baz = other._baz;
-        
-            other._baz = nullptr;
-        
+            _baz = std::exchange(other._baz, nullptr); 
             return *this;
-        }
-
-        // Move Constructor
-        A(A&& other) noexcept: 
-            _foo(other._foo),
-            _bar(other._bar),
-            _baz(other._baz)x
-        {
-            std::cout << "Move Constructor Called" << std::endl;
-            other._baz = nullptr;  // prevent double delete
         }
 
     // Private Instance Variables.
@@ -82,13 +91,10 @@ class A {
 };
 
 int main() {
-    std::cout << "Create first Object" << std::endl;
-    A a = A(1, 'c', 2);
-    std::cout << "Move object" << std::endl;
-    A a2 = std::move(a);
-    std::cout << "Create Second Object" << std::endl;
-    A a3 = A(2, 'b', 3);
-    std::cout << "Reassign second object" << std::endl;
-    a3 = A(3, 'c', 4);
+    A a(1, 'c', 2); // Constructor
+    A a2 = a; // Copy Constructor
+    a2 = a; // Copy Assignment
+    A a3 = A(3, 'c', 4); // Move Constructor
+    a3 = A(3, 'c', 4); // Move Assignment
     return 0;
-}
+} // Destructors will be called when objects go out of scope.

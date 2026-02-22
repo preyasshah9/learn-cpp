@@ -1,6 +1,9 @@
 /*
 This code shows how alignment works by defining a few structs, and ordering of the members within struct
 can affect the storage occupied by it.
+Even with re-ordering of the fields, you can make sure objects occupy less storage underlying. This
+could have performance implications especially when objects are required to be allocated in the large
+array sizes.
 */
 
 #include <iostream>
