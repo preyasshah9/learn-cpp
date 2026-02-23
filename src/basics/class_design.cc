@@ -17,7 +17,6 @@ We will touch these methods:
 #include <iostream>
 
 class A {
-
     public:
         // Method 1: Constructor
         A(int a, char b, int c):
@@ -88,6 +87,42 @@ class A {
         char _bar;
         // Raw pointer. Use std::unique to RAII manage the allocations.
         int* _baz;
+};
+
+// RAII Design
+class B {
+    B(int _foo, char _bar, int _baz): 
+        _foo(_foo), 
+        _bar(_bar), 
+        _baz(std::make_unique<int>(_baz))
+    {}
+    // No need for destructor and destroying memory manually.
+
+    // Copy Operations are deleted. If you want to support deep copy, you need to implement them like
+    // shown below.
+
+    // Copy Constructor
+    B(const B& other) :
+        _foo(other._foo), 
+        _bar(other._bar), 
+        _baz(other._baz ? 
+            std::make_unique<int>(*other._baz)  // Creates a new ownership.
+            : nullptr) {}
+
+    // Copy Assignment
+    B& operator=(const B& other) {
+        _foo = other._foo;
+        _bar = other._bar;
+        _baz = other._baz ? std::make_unique<int>(*other._baz) : nullptr;
+        return *this;
+    }
+
+    // Move Operations are defined default.
+    private:
+        int _foo;
+        char _bar;
+        // Unique pointer.
+        std::unique_ptr<int> _baz;
 };
 
 int main() {
