@@ -15,71 +15,68 @@ implemented that will turn on/off different electronics within the room.
 // All operations are in double.
 
 #include <iostream>
+#include <vector>
+#include <memory>
 #include <stack>
+
+template <typename T>
 class Command {
-    // Executes a command.
-    public:
-        virtual ~Command() = default;
-        virtual double execute(double a) = 0;
-        // Undo a command.
-        virtual double undo(double a) = 0;
-
+public:
+    virtual ~Command() = default;
+    virtual T execute(T current) const = 0;
+    virtual T undo(T current) const = 0;
 };
 
-class AddCommand : public Command {
-    public:
-        AddCommand(int operand): operand_(operand) {}
-        double execute(double a) override {
-            return a + operand_;
-        }
-        double undo(double a) override {
-            return operand_ - a;
-        }
-    private:
-        int operand_;
+template <typename T>
+class AddCommand : public Command<T> {
+    T operand_;
+public:
+    explicit AddCommand(T op) : operand_(op) {}
+    T execute(T a) const override { return a + operand_; }
+    T undo(T a) const override { return a - operand_; } // Fixed logic
 };
 
-class MultiplyCommand : public Command {
-    public:
-        MultiplyCommand(int operand): operand_(operand) {}
-        double execute(double a) override {
-            return a * operand_;
-        }
-        double undo(double a) override {
-            return a / operand_;
-        } 
-    private:
-        double operand_;
+template <typename T>
+class MultiplyCommand : public Command<T> {
+    T operand_;
+public:
+    explicit MultiplyCommand(T op) : operand_(op) {}
+    T execute(T a) const override { return a * operand_; }
+    T undo(T a) const override { return a / operand_; }
 };
 
+template <typename T>
 class Calculator {
-    public:
-        void execute(std::unique_ptr<Command> command) {
-            result = command->execute(result);
-            cmdStack.push(std::move(command));
-        }
-        void undo() {
-            if(!cmdStack.empty()) {
-                result = cmdStack.top()->undo(result);
-                cmdStack.pop();
-            }
-        }
-        void printResult() {
-            std::cout << result << std::endl;
-        }
-    private:
-        std::stack<std::unique_ptr<Command>> cmdStack;
-        int result = 0;
+    T result = 0;
+    // Store pointers to commands to allow undoing
+    std::stack<std::unique_ptr<Command<T>>> history;
+
+public:
+    void compute(std::unique_ptr<Command<T>> cmd) {
+        result = cmd->execute(result);
+        history.push(std::move(cmd));
+    }
+
+    void undo() {
+        if (history.empty()) return;
+        result = history.top()->undo(result);
+        history.pop();
+    }
+
+    void print() const { std::cout << "Current Result: " << result << std::endl; }
 };
 
 int main() {
-    Calculator calc;
-    calc.execute(std::make_unique<AddCommand>(12));
-    calc.printResult();
-    calc.execute(std::make_unique<AddCommand>(45));
-    calc.printResult();
-    calc.execute(std::make_unique<MultiplyCommand>(2));
-    calc.printResult();
+    Calculator<double> calc;
+
+    calc.compute(std::make_unique<AddCommand<double>>(12));
+    calc.compute(std::make_unique<AddCommand<double>>(45));
+    calc.compute(std::make_unique<MultiplyCommand<double>>(2));
+    
+    calc.print(); // 114
     calc.undo();
-    calc.printResult();
+    calc.print(); // 57
+    
+    return 0;
 }
+
