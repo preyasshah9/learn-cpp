@@ -15,8 +15,10 @@ implemented that will turn on/off different electronics within the room.
 // All operations are in double.
 
 #include <iostream>
-#include <vector>
+#include <queue>
+#include <functional>
 #include <memory>
+#include <chrono>
 #include <stack>
 
 template <typename T>
@@ -66,6 +68,57 @@ public:
     void print() const { std::cout << "Current Result: " << result << std::endl; }
 };
 
+class Light {
+    public:
+        void turnOn() {
+            std::cout << "Light is turned on." << std::endl;
+        }
+        void turnOff() {
+            std::cout << "Light is turned off." << std::endl;
+        }
+};
+
+class Fan {
+    public:
+        void turnOn() {
+            std::cout << "Fan is turned on." << std::endl;
+        }
+        void turnOff() {
+            std::cout << "Fan is turned off." << std::endl;
+        }
+        void incSpeed() {
+            ++speed;
+            std::cout << "Fan is running fast at speed: " << speed << std::endl;
+        }
+    private:
+        int speed = 0;
+};
+
+// Let's design the remote control command using `std::function`.
+class Scheduler {
+    public:
+        void execute() {
+            if(task_scheduler.empty()) {
+                std::cout << "No tasks to execute in queue" << std::endl;
+                return;
+            }
+            auto& [func, delay] = task_scheduler.front();
+            std::cout << "Waiting for Delay" << delay << std::endl;
+            func();
+            task_scheduler.pop();
+        };
+        void run() {
+            while(!task_scheduler.empty()) {
+                execute();
+            }
+        }
+        void addTask(std::function<void()> task, int delay) {
+            task_scheduler.push({task, delay});
+        }
+    private:
+        std::queue<std::pair<std::function<void()>, int>> task_scheduler;
+};
+
 int main() {
     Calculator<double> calc;
 
@@ -77,6 +130,30 @@ int main() {
     calc.undo();
     calc.print(); // 57
     
+    auto light = std::make_shared<Light>();
+    auto fan = std::make_shared<Fan>();
+    Scheduler scheduler; 
+    scheduler.addTask([light]() {
+        light->turnOn();
+    }, 500);
+
+    scheduler.addTask([fan]() {
+        fan->turnOn();
+    }, 1000);
+
+    scheduler.addTask([light]() {
+        light->turnOff();
+    }, 1000);
+
+    scheduler.addTask([fan]() {
+        fan->incSpeed();
+    }, 1000);
+
+    scheduler.addTask([fan]() {
+        fan->turnOff();
+    }, 1000);
+
+    scheduler.run();
     return 0;
 }
 
