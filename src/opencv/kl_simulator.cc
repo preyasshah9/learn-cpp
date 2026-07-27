@@ -1,4 +1,3 @@
-#include <opencv2/opencv.hpp>
 #include <iostream>
 #include <random>
 
@@ -70,7 +69,7 @@ int main() {
         bins[i] /= static_cast<float>(DATASET_SIZE);
     }
 
-    float min_score = 100000; // Hacky, arbitrary large value.
+    float min_score = std::numeric_limits<float>::infinity();
     float min_T;
     for(int T = 255; T < 2048; ++T) {
         std::vector<float>p_clipped(T + 1, 0.0);
@@ -82,21 +81,21 @@ int main() {
             p_clipped[T] += bins[i];
         } 
 
-        float num_merged_bins = static_cast<float>(T + 1) / 256.0;
         std::vector<float>Q(2048, 0.0);
         for(int i = 0; i < 256; ++i) {
-            int start = num_merged_bins * i;
-            int end = num_merged_bins * (i + 1);
+            int start = (i * (T + 1)) / 256;
+            int end = ((i + 1) * (T + 1)) / 256;
             if (end > (T + 1)) end = T + 1;
+            int width = end - start;
             float probs = 0.0;
             for(int j = start; j < end; ++j) {
                 probs += p_clipped[j];
             }
-            if(start == end) {
-                Q[start] = probs;
-            }
-            for(int j = start; j < end; ++j) {
-                Q[j] = probs / num_merged_bins;
+            if(width > 0) {
+                float reconstructed = probs / static_cast<float>(width);
+                for (int j = start; j < end; ++j) {
+                    Q[j] = reconstructed;
+                } 
             }
         }
         float kl_divergence = 0.0f;
